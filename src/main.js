@@ -33,6 +33,7 @@ async function handleSearch(evt) {
   currentSearchQuery = searchValue;
   imgs.innerHTML = '';
   loadMoreBtn.style.display = 'none';
+  notFoundTextEl.innerHTML = '';
   loaderClass.style.display = 'flex';
 
   try {
@@ -50,11 +51,16 @@ async function handleSearch(evt) {
       return;
     }
 
-    notFoundTextEl.innerHTML = '';
     createCardsMarkup(data.hits);
 
     if (data.totalHits > currentPage * 15) {
       loadMoreBtn.style.display = 'block';
+    } else {
+      iziToast.show({
+        message: "We're sorry, but you've reached the end of search results.",
+        backgroundColor: '#4e75ff',
+        messageColor: 'white',
+      });
     }
 
     await handleImagesLoad();
@@ -75,19 +81,34 @@ async function handleSearch(evt) {
 async function handleLoadMore() {
   currentPage += 1;
   loadMoreBtn.style.display = 'none';
+  loaderClass.style.display = 'flex';
 
   try {
     const data = await getImg(currentSearchQuery, currentPage);
     createCardsMarkup(data.hits, true);
 
-    if (data.totalHits > currentPage * 15) {
-      loadMoreBtn.style.display = 'block';
-    } else {
+    // Отримання висоти карточки після рендеру
+    const cardHeight = document
+      .querySelector('.gallery-card')
+      .getBoundingClientRect().height;
+
+    // Плавне прокручування на 2 висоти карточки
+    window.scrollBy({
+      top: cardHeight * 2,
+      behavior: 'smooth',
+    });
+
+    loaderClass.style.display = 'none';
+
+    if (currentPage * 15 >= data.totalHits) {
+      loadMoreBtn.style.display = 'none';
       iziToast.show({
         message: "We're sorry, but you've reached the end of search results.",
         backgroundColor: '#4e75ff',
         messageColor: 'white',
       });
+    } else {
+      loadMoreBtn.style.display = 'block';
     }
 
     await handleImagesLoad();
@@ -99,7 +120,6 @@ async function handleLoadMore() {
       backgroundColor: '#ef4040',
       messageColor: 'white',
     });
-  } finally {
     loaderClass.style.display = 'none';
   }
 }
