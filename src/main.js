@@ -6,68 +6,112 @@ import 'izitoast/dist/css/iziToast.min.css';
 const fetchUsersBtn = document.querySelector('button[type=submit]');
 const imgs = document.querySelector('.images-div');
 const loaderClass = document.querySelector('.loaderClass');
+const loadMoreBtn = document.querySelector('.load-more');
+
+let currentPage = 1;
+let currentSearchQuery = '';
 
 fetchUsersBtn.addEventListener('click', handleSearch);
+loadMoreBtn.addEventListener('click', handleLoadMore);
 
-function handleSearch(evt) {
+async function handleSearch(evt) {
   evt.preventDefault();
-  let searchInput = document.querySelector('input[name="search"]');
-  let notFoundTextEl = document.querySelector('.not-found-img');
-  let searchValue = searchInput.value.trim();
+  const searchInput = document.querySelector('input[name="search"]');
+  const notFoundTextEl = document.querySelector('.not-found-img');
+  const searchValue = searchInput.value.trim();
 
-  if (searchValue <= 0) {
+  if (searchValue.length === 0) {
     iziToast.show({
       title: '❌',
-      message:
-        'Sorry, there are no images matching your search query. Please try again!',
+      message: 'Please enter a search query!',
       color: 'ef4040',
     });
     return;
   }
 
+  currentPage = 1;
+  currentSearchQuery = searchValue;
+  imgs.innerHTML = '';
+  loadMoreBtn.style.display = 'none';
   loaderClass.style.display = 'flex';
 
-  getImg(searchValue)
-    .then(data => {
-      if (data.total === 0) {
-        imgs.innerHTML = '';
-        notFoundTextEl.innerHTML = `Results for query <span>${searchValue}</span> not found!`;
-        iziToast.show({
-          title: '❌',
-          message:
-            'Sorry, there are no images matching your search query. Please try again!',
-          backgroundColor: '#ef4040',
-          messageColor: 'white',
-        });
-        return;
-      }
+  try {
+    const data = await getImg(searchValue, currentPage);
 
-      // Очищення тексту "not found" перед відображенням нових результатів
-      notFoundTextEl.innerHTML = '';
-
-      createCardsMarkup(data.hits);
-
-      const imageElements = document.querySelectorAll('.gallery-img');
-      const loadPromises = Array.from(imageElements).map(img => {
-        return new Promise(resolve => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
+    if (data.total === 0) {
+      notFoundTextEl.innerHTML = `Results for query <span>${searchValue}</span> not found!`;
+      iziToast.show({
+        title: '❌',
+        message:
+          'Sorry, there are no images matching your search query. Please try again!',
+        backgroundColor: '#ef4040',
+        messageColor: 'white',
       });
+      return;
+    }
 
-      Promise.all(loadPromises)
-        .then(() => {
-          console.log(loadPromises);
-        })
-        .catch(err => {
-          loaderClass.innerHTML = '';
-          console.error(err);
-        });
-    })
-    .catch(console.error)
-    .finally(() => {
-      console.log('completed');
-      loaderClass.style.display = 'none';
+    notFoundTextEl.innerHTML = '';
+    createCardsMarkup(data.hits);
+
+    if (data.totalHits > currentPage * 15) {
+      loadMoreBtn.style.display = 'block';
+    }
+
+    await handleImagesLoad();
+  } catch (error) {
+    console.error(error);
+    iziToast.show({
+      title: '❌',
+      message: 'An error occurred while fetching images',
+      backgroundColor: '#ef4040',
+      messageColor: 'white',
     });
-  searchInput.value = '';
+  } finally {
+    loaderClass.style.display = 'none';
+    searchInput.value = '';
+  }
+}
+
+async function handleLoadMore() {
+  currentPage += 1;
+  loadMoreBtn.style.display = 'none';
+
+  try {
+    const data = await getImg(currentSearchQuery, currentPage);
+    createCardsMarkup(data.hits, true);
+
+    if (data.totalHits > currentPage * 15) {
+      loadMoreBtn.style.display = 'block';
+    } else {
+      iziToast.show({
+        message: "We're sorry, but you've reached the end of search results.",
+        backgroundColor: '#4e75ff',
+        messageColor: 'white',
+      });
+    }
+
+    await handleImagesLoad();
+  } catch (error) {
+    console.error(error);
+    iziToast.show({
+      title: '❌',
+      message: 'An error occurred while loading more images',
+      backgroundColor: '#ef4040',
+      messageColor: 'white',
+    });
+  } finally {
+    loaderClass.style.display = 'none';
+  }
+}
+
+async function handleImagesLoad() {
+  const imageElements = document.querySelectorAll('.gallery-img');
+  const loadPromises = Array.from(imageElements).map(img => {
+    return new Promise(resolve => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+  });
+
+  await Promise.all(loadPromises);
 }

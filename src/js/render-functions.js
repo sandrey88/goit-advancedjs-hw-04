@@ -3,7 +3,7 @@ import 'simplelightbox/dist/simple-lightbox.min.css';
 
 let galleryLightbox;
 
-function createCardsMarkup(cards) {
+function createCardsMarkup(cards, append = false) {
   const cartItem = cards
     .map(
       ({
@@ -41,12 +41,16 @@ function createCardsMarkup(cards) {
     )
     .join('');
 
-  loadSimpleLitebox(cartItem);
+  loadSimpleLitebox(cartItem, append);
 }
 
-function loadSimpleLitebox(cartItem) {
+function loadSimpleLitebox(cartItem, append) {
   const gallery = document.querySelector('ul.images-div');
-  gallery.innerHTML = cartItem;
+  if (append) {
+    gallery.insertAdjacentHTML('beforeend', cartItem);
+  } else {
+    gallery.innerHTML = cartItem;
+  }
 
   if (galleryLightbox) {
     galleryLightbox.refresh();

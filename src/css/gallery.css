@@ -200,3 +200,9 @@ img {
         transform: rotate(-360deg);
     }
 }
+
+.load-more {
+    display: none;
+    margin: 20px auto;
+    width: 120px;
+}

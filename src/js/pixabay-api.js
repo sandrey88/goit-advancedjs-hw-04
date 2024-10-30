@@ -1,23 +1,21 @@
-const API_KEY = '46726016-b290741f0a1b76ad16aa31499';
+import axios from 'axios';
 
-function getImg(searchValue) {
+const API_KEY = '46726016-b290741f0a1b76ad16aa31499';
+axios.defaults.baseURL = 'https://pixabay.com/api/';
+
+async function getImg(searchValue, page = 1) {
   const searchParams = new URLSearchParams({
     key: API_KEY,
     q: searchValue,
     image_type: 'photo',
     orientation: 'horizontal',
     safesearch: 'true',
+    per_page: 15,
+    page,
   });
 
-  return fetch(`https://pixabay.com/api/?${searchParams.toString()}`).then(
-    res => {
-      if (!res.ok) {
-        throw new Error(res.status);
-      }
-
-      return res.json();
-    }
-  );
+  const response = await axios.get(`?${searchParams}`);
+  return response.data;
 }
 
 export { getImg };
